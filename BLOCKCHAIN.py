@@ -8,11 +8,16 @@ class NeuralCoinBlock:
         self.block_data = "-".join(transaction_list) + "-" + previous_block_hash
         self.block_hash = hashlib.sha256(self.block_data.encode()).hexdigest()
 
-t1 = "Paola envia 2 NC a Hernand"
+t1 = "Paola envia 2 NC a Jose"
+
 t2 = "Paola envia 1.1 NC a Alfredo"
+
 t3 = "Mike envia 5.2 NC a Isabel"
+
 t4 = "Isabel envia 0.7 NC a Hernand"
+
 t5 = "Isabel envia 2.9 NC a Paola"
+
 t6 = "Jesus envia 7.9 NC a Mike"
 
 initial_block = NeuralCoinBlock("", [t1,t2])
