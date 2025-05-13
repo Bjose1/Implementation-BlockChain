@@ -1,6 +1,7 @@
 import hashlib
 import json
-import tkinter
+import tkinter as tk
+import tkinter as ttk
 
 # Simula una transacción válida con firma simple (solo como texto)
 class Transaction:
@@ -42,7 +43,8 @@ class Block:
             "nonce": self.nonce
         }
         block_string = json.dumps(block_data, sort_keys=True)
-        return hashlib.sha256(block_string.encode()).hexdigest()
+        first_hash = hashlib.sha256(block_string.encode()).digest()  # bytes
+        return hashlib.sha256(first_hash).hexdigest()
 
     def is_valid(self, expected_prev_hash, reward_limit=10):
         # 1. Verificar conexión
@@ -72,6 +74,11 @@ class Block:
 
         print("✅ Bloque válido")
         return True
+        
+    def mine_block(block):
+        while not block.hash.startswith("0000"):
+            block.nonce += 1
+            block.hash = block.compute_hash()
 
 # Ejemplo de uso
 if __name__ == "__main__":
@@ -79,25 +86,72 @@ if __name__ == "__main__":
     tx0 = Transaction("network", "miner1", 10)  # coinbase
     tx1 = Transaction("Alice", "Bob", 5)
     tx2 = Transaction("Charlie", "Dave", 3)
+    block1 = Block(index=1, prev_hash="-", transactions=[tx0, tx1, tx2], nonce=0)
+    Block.mine_block(block1)
+    print("Hash del bloque minado:", block1.hash)
+    block1.is_valid(expected_prev_hash="-")
 
-    block1 = Block(index=1, prev_hash="0000abc123", transactions=[tx0, tx1, tx2], nonce=1234)
-
-    tx3 = Transaction("network", "miner2", 15)  
+    tx3 = Transaction("network", "miner2", 10)  
     tx4 = Transaction("Claudia", "Bett", 4)
     tx5 = Transaction("Fabian", "Mafe", 4)
-    block2 = Block(index=2, prev_hash=block1.hash, transactions=[tx3, tx4, tx5], nonce=1234)
+    block2 = Block(index=2, prev_hash=block1.hash, transactions=[tx3, tx4, tx5], nonce=0)
+    Block.mine_block(block2)
+    print("Hash del bloque minado:", block2.hash)
+    block2.is_valid(expected_prev_hash=str(block1.hash))
 
-    tx6 = Transaction("Samuel", "Jose", 10)  
+    tx6 = Transaction("network", "miner3", 10)  
     tx7 = Transaction("Ernest", "Sam", 7)
     tx8 = Transaction("Carlos", "Tina", 1)
-    block3 = Block(index=3, prev_hash=block2.hash, transactions=[tx6, tx7, tx8], nonce=1234)
+    block3 = Block(index=3, prev_hash=block2.hash, transactions=[tx6, tx7, tx8], nonce=0)
+    Block.mine_block(block3)
+    print("Hash del bloque minado:", block3.hash)
+    block3.is_valid(expected_prev_hash=str(block2.hash))
 
-    # Simular un hash que cumpla dificultad (empezar con 0000)
-    while not block1.hash.startswith("0000"):
-        block1.nonce += 1
-        block1.hash = block1.compute_hash()
 
-    print("Hash del bloque minado:", block1.hash)
-    block1.is_valid(expected_prev_hash="0000abc123")
+blockchain = [block1, block2, block3]
 
-    
+# INTERFAZ GRÁFICA
+def show_blocks_gui(blocks):
+    root = tk.Tk()
+    root.title("Visualizador de Blockchain")
+    root.geometry("700x200")
+    canvas = tk.Canvas(root)
+    scrollbar = ttk.Scrollbar(root, orient="horizontal", command=canvas.xview)
+    scrollable_frame = ttk.Frame(canvas)
+
+    scrollable_frame.bind(
+        "<Configure>",
+        lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+    )
+
+    canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+    canvas.configure(xscrollcommand=scrollbar.set)
+
+    canvas.pack(side="top", fill="both", expand=True)
+    scrollbar.pack(side="bottom", fill="x")
+
+    for i, block in enumerate(blocks):
+        # Crear el marco para el bloque
+        frame = ttk.LabelFrame(scrollable_frame, text=f"🧱 Bloque {block.index}")
+        frame.grid(row=0, column=i*2, padx=10, pady=10, sticky="n")
+
+        # Agregar detalles del bloque
+        ttk.Label(frame, text=f"Hash: {block.hash[:12]}...").pack(anchor="w", padx=5)
+        ttk.Label(frame, text=f"Prev: {block.prev_hash[:12]}...").pack(anchor="w", padx=5)
+        ttk.Label(frame, text=f"Nonce: {block.nonce}").pack(anchor="w", padx=5)
+        ttk.Label(frame, text="Tx:").pack(anchor="w", padx=5)
+
+        for tx in block.transactions:
+            tx_str = f"• {tx.sender} → {tx.recipient}: {tx.amount}"
+            ttk.Label(frame, text=tx_str).pack(anchor="w", padx=15)
+
+        # Flecha hacia el bloque anterior (izquierda)
+        if i > 0:
+            arrow = ttk.Label(scrollable_frame, text="⬅️", font=("Arial", 20))
+            arrow.grid(row=0, column=i*2 - 1, padx=5)
+
+    root.mainloop()
+
+# Ejecutar interfaz
+if __name__ == "__main__":
+    show_blocks_gui(blockchain)
